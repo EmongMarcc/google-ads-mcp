@@ -22,7 +22,7 @@ function getCustomer(creds, customerId) {
 }
 
 // Wrap every tool handler to catch auth errors and return clear guidance
-function withAuthErrorHandling(fn, mcpBaseUrl) {
+function withAuthErrorHandling(fn, sessionToken, baseUrl) {
   return async (...args) => {
     try {
       return await fn(...args);
@@ -100,7 +100,7 @@ function withAuthErrorHandling(fn, mcpBaseUrl) {
 }
 
 export function registerTools(server, creds, sessionToken, baseUrl) {
-  const wrap = (fn) => withAuthErrorHandling(fn);
+  const wrap = (fn) => withAuthErrorHandling(fn, sessionToken, baseUrl);
 
   // 1. LIST CAMPAIGNS
   server.tool(
