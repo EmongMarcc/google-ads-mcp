@@ -1,6 +1,19 @@
 # Google Ads MCP Server
 
-A remote MCP server that connects Claude.ai to your Google Ads account via the [Model Context Protocol](https://modelcontextprotocol.io).
+A **public** remote MCP server that connects Claude.ai to any Google Ads account.
+No installation required — visit the web app, enter your credentials, and get a personal MCP URL in seconds.
+
+## 🚀 Live App
+
+> **[your-app.railway.app](https://your-app.railway.app)**
+
+## How It Works
+
+1. Visit the web app
+2. Enter your Google Ads OAuth credentials
+3. Get your personal MCP URL (e.g. `https://your-app.railway.app/mcp/your-uuid`)
+4. Add it to Claude.ai → Settings → Integrations
+5. Ask Claude to manage your campaigns!
 
 ## Tools (18 total)
 
@@ -25,28 +38,50 @@ A remote MCP server that connects Claude.ai to your Google Ads account via the [
 | `get_quality_scores` | Quality scores for all keywords |
 | `run_gaql_query` | Run any custom GAQL query |
 
+## API
+
+### Register
+```
+POST /register
+Content-Type: application/json
+
+{
+  "clientId": "...",
+  "clientSecret": "...",
+  "refreshToken": "...",
+  "developerToken": "...",
+  "customerId": "123-456-7890",
+  "managerAccountId": "..." // optional
+}
+```
+
+Response: `{ "token": "uuid", "mcpUrl": "https://host/mcp/uuid" }`
+
+### Your MCP Endpoint
+```
+https://your-app.railway.app/mcp/<your-token>
+```
+
+Use this URL in Claude.ai → Settings → Integrations.
+
 ## Deploy to Railway
 
-1. Push this repo to GitHub
-2. Create a new Railway project from the repo
-3. Add environment variables (see `.env.example`)
-4. Railway auto-deploys — copy your public URL
+1. Fork this repo
+2. Create a new Railway project from the fork
+3. Railway auto-deploys — no environment variables needed for the public app
+4. Your public URL is your Railway domain
 
-## Connect to Claude.ai
+## Security
 
-1. Go to **Claude.ai → Settings → Integrations**
-2. Click **Add Integration**
-3. Enter your Railway URL: `https://your-app.railway.app/mcp`
-4. Save — you're connected!
+- Credentials are stored in **server memory only** — never written to disk or a database
+- Each user gets a unique UUID token
+- Sessions reset when the server restarts (just re-register)
+- Credentials are never logged
 
-## Environment Variables
+## Getting Google Ads Credentials
 
-| Variable | Description |
-|----------|-------------|
-| `GOOGLE_ADS_CLIENT_ID` | OAuth 2.0 Client ID |
-| `GOOGLE_ADS_CLIENT_SECRET` | OAuth 2.0 Client Secret |
-| `GOOGLE_ADS_REFRESH_TOKEN` | OAuth 2.0 Refresh Token |
-| `GOOGLE_DEVELOPER_TOKEN` | Google Ads Developer Token |
-| `GOOGLE_CUSTOMER_ID` | Your Ads account ID (e.g. `993-324-5164`) |
-| `GOOGLE_MANAGER_ACCOUNT_ID` | Manager (MCC) account ID |
-| `PORT` | Server port (Railway sets this automatically) |
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project and enable the Google Ads API
+3. Create OAuth 2.0 credentials (Desktop app)
+4. Use the OAuth Playground or `google-ads-api` CLI to generate a refresh token
+5. Get your Developer Token from [Google Ads API Center](https://ads.google.com/home/tools/manager-accounts/)

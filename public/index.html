@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Ads MCP — Connect Claude to Your Ads</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --text: #e8e8f0;
+      --muted: #6b6b8a;
+      --accent: #4ade80;
+      --accent2: #818cf8;
+      --google-blue: #4285f4;
+      --google-red: #ea4335;
+      --google-yellow: #fbbc04;
+      --google-green: #34a853;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(130, 140, 248, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(130, 140, 248, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* NAV */
+    nav {
+      padding: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.8); }
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* HERO */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(74, 222, 128, 0.08);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 40px;
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      font-size: clamp(42px, 6vw, 76px);
+      font-weight: 300;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px;
+    }
+
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--google-blue), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 19px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 60px;
+      line-height: 1.6;
+      font-weight: 300;
+    }
+
+    /* G COLORS */
+    .g-blue { color: var(--google-blue); }
+    .g-red { color: var(--google-red); }
+    .g-yellow { color: var(--google-yellow); }
+    .g-green { color: var(--google-green); }
+
+    /* TOOL PILLS */
+    .tool-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      max-width: 700px;
+      margin: 0 auto 80px;
+    }
+
+    .tool-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--surface);
+      transition: all 0.2s;
+    }
+
+    .tool-pill:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: rgba(129, 140, 248, 0.06);
+    }
+
+    /* SETUP FORM */
+    .setup-section {
+      padding: 0 0 80px;
+    }
+
+    .setup-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .setup-header {
+      padding: 32px 40px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .setup-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(129, 140, 248, 0.1);
+      border: 1px solid rgba(129, 140, 248, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    .setup-header-text h2 {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .setup-header-text p {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .setup-body {
+      padding: 40px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 12px;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    label .req { color: var(--accent); margin-left: 2px; }
+
+    input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'Space Mono', monospace;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+    }
+
+    input::placeholder { color: var(--muted); opacity: 0.5; font-size: 13px; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+      font-family: 'DM Sans', sans-serif;
+      letter-spacing: 0.01em;
+    }
+
+    .submit-btn:hover {
+      background: #86efac;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(74, 222, 128, 0.25);
+    }
+
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* RESULT BOX */
+    .result-box {
+      display: none;
+      margin-top: 24px;
+      padding: 24px;
+      background: rgba(74, 222, 128, 0.04);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      border-radius: 12px;
+    }
+
+    .result-box.show { display: block; }
+
+    .result-box h3 {
+      font-size: 14px;
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 16px;
+      letter-spacing: 0.05em;
+    }
+
+    .url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .url-display {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--accent2);
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .copy-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .copy-btn.copied { border-color: var(--accent); color: var(--accent); }
+
+    .next-steps {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .next-steps strong { color: var(--text); }
+
+    /* ERROR BOX */
+    .error-box {
+      display: none;
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(234, 67, 53, 0.06);
+      border: 1px solid rgba(234, 67, 53, 0.2);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #f87171;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .error-box.show { display: block; }
+
+    /* FEATURES */
+    .features {
+      padding: 80px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .features-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .feature {
+      padding: 32px;
+      background: var(--surface);
+      transition: background 0.2s;
+    }
+
+    .feature:hover { background: #15151e; }
+
+    .feature-icon {
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+
+    .feature h3 {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .feature p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* HOW IT WORKS */
+    .how {
+      padding: 80px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .how h2 {
+      font-size: 32px;
+      font-weight: 300;
+      text-align: center;
+      margin-bottom: 56px;
+      letter-spacing: -0.02em;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent2);
+      letter-spacing: 0.05em;
+    }
+
+    .step h3 {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .step p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .step-line {
+      position: relative;
+    }
+
+    .step-line::after {
+      content: '→';
+      position: absolute;
+      right: -14px;
+      top: 0;
+      color: var(--border);
+      font-size: 20px;
+    }
+
+    .step:last-child .step-line::after { display: none; }
+
+    /* FOOTER */
+    footer {
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    footer p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    /* LOADING */
+    .loading {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(10,10,15,0.3);
+      border-top-color: #0a0a0f;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Fade in */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.6s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr 1fr; }
+      .setup-body { padding: 24px; }
+      .setup-header { padding: 24px; }
+      h1 { font-size: 38px; }
+      .step-line::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <nav>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      google-ads-mcp
+    </div>
+    <ul class="nav-links">
+      <li><a href="#setup">Get Started</a></li>
+      <li><a href="#tools">Tools</a></li>
+      <li><a href="https://github.com/EmongMarcc/google-ads-mcp" target="_blank">GitHub</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero fade-up">
+    <div class="hero-badge">
+      ✦ 18 Tools &nbsp;·&nbsp; Zero Config &nbsp;·&nbsp; Instant Connect
+    </div>
+    <h1>
+      Control your<br/>
+      <em>Google Ads</em><br/>
+      from Claude
+    </h1>
+    <p class="hero-sub">
+      A public MCP server that connects Claude.ai directly to your Google Ads account.
+      No setup, no code — just enter your credentials and get a personal MCP URL.
+    </p>
+  </section>
+
+  <!-- TOOL CLOUD -->
+  <div class="tool-cloud fade-up delay-1" id="tools">
+    <span class="tool-pill">list_campaigns</span>
+    <span class="tool-pill">get_campaign_performance</span>
+    <span class="tool-pill">list_ad_groups</span>
+    <span class="tool-pill">list_ads</span>
+    <span class="tool-pill">get_keywords</span>
+    <span class="tool-pill">get_account_summary</span>
+    <span class="tool-pill">get_top_keywords</span>
+    <span class="tool-pill">get_search_terms</span>
+    <span class="tool-pill">get_geo_performance</span>
+    <span class="tool-pill">get_device_performance</span>
+    <span class="tool-pill">get_ad_schedule_performance</span>
+    <span class="tool-pill">get_audience_performance</span>
+    <span class="tool-pill">update_campaign_status</span>
+    <span class="tool-pill">update_campaign_budget</span>
+    <span class="tool-pill">get_conversion_actions</span>
+    <span class="tool-pill">get_keyword_ideas</span>
+    <span class="tool-pill">get_quality_scores</span>
+    <span class="tool-pill">run_gaql_query</span>
+  </div>
+
+  <!-- SETUP FORM -->
+  <section class="setup-section fade-up delay-2" id="setup">
+    <div class="setup-card">
+      <div class="setup-header">
+        <div class="setup-num">1</div>
+        <div class="setup-header-text">
+          <h2>Enter your Google Ads credentials</h2>
+          <p>Your credentials are stored in memory only — never saved to disk or a database.</p>
+        </div>
+      </div>
+      <div class="setup-body">
+        <form id="setupForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Client ID <span class="req">*</span></label>
+              <input type="text" id="clientId" placeholder="xxx.apps.googleusercontent.com" required />
+            </div>
+            <div class="form-group">
+              <label>Client Secret <span class="req">*</span></label>
+              <input type="password" id="clientSecret" placeholder="GOCSPX-..." required />
+            </div>
+            <div class="form-group full">
+              <label>Refresh Token <span class="req">*</span></label>
+              <input type="password" id="refreshToken" placeholder="1//..." required />
+            </div>
+            <div class="form-group">
+              <label>Developer Token <span class="req">*</span></label>
+              <input type="password" id="developerToken" placeholder="ABC123..." required />
+            </div>
+            <div class="form-group">
+              <label>Customer ID <span class="req">*</span></label>
+              <input type="text" id="customerId" placeholder="123-456-7890" required />
+            </div>
+            <div class="form-group full">
+              <label>Manager Account ID <span style="color:var(--muted);font-size:10px">(optional, MCC)</span></label>
+              <input type="text" id="managerAccountId" placeholder="Leave blank if not using MCC" />
+            </div>
+          </div>
+          <button type="submit" class="submit-btn" id="submitBtn">
+            Generate My MCP URL →
+          </button>
+          <div class="error-box" id="errorBox"></div>
+        </form>
+
+        <div class="result-box" id="resultBox">
+          <h3>✓ YOUR PERSONAL MCP URL</h3>
+          <div class="url-row">
+            <div class="url-display" id="mcpUrl"></div>
+            <button class="copy-btn" id="copyBtn" onclick="copyUrl()">Copy</button>
+          </div>
+          <p class="next-steps">
+            <strong>To connect in Claude.ai:</strong><br/>
+            1. Go to <strong>Settings → Integrations</strong><br/>
+            2. Click <strong>Add Integration</strong><br/>
+            3. Paste your URL above and save<br/>
+            4. Start a new chat and ask Claude about your Google Ads campaigns!
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features fade-up delay-3">
+    <p class="features-label">Why this exists</p>
+    <div class="features-grid">
+      <div class="feature">
+        <div class="feature-icon">⚡</div>
+        <h3>Instant setup</h3>
+        <p>No npm install, no code changes. Enter your credentials once and get a ready-to-use MCP URL in seconds.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔒</div>
+        <h3>Your credentials, your session</h3>
+        <p>Credentials are stored in server memory tied to your unique token. They're never logged, never shared, and reset on server restart.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🎯</div>
+        <h3>18 purpose-built tools</h3>
+        <p>From campaign performance to keyword ideas, quality scores to custom GAQL queries — everything you need to manage ads with AI.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step step-line">
+        <span class="step-num">STEP 01</span>
+        <h3>Enter credentials</h3>
+        <p>Paste your Google OAuth credentials and Developer Token from Google Cloud Console.</p>
+      </div>
+      <div class="step step-line">
+        <span class="step-num">STEP 02</span>
+        <h3>Get your URL</h3>
+        <p>We generate a unique MCP endpoint just for you, like <code style="color:var(--accent2);font-size:12px">/mcp/your-uuid</code>.</p>
+      </div>
+      <div class="step step-line">
+        <span class="step-num">STEP 03</span>
+        <h3>Add to Claude</h3>
+        <p>Go to Claude.ai → Settings → Integrations and paste your personal MCP URL.</p>
+      </div>
+      <div class="step">
+        <span class="step-num">STEP 04</span>
+        <h3>Start chatting</h3>
+        <p>Ask Claude to analyze your campaigns, find low-quality keywords, or pause underperforming ads.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Open source · Built for Claude.ai</p>
+    <div class="footer-links">
+      <a href="https://github.com/EmongMarcc/google-ads-mcp" target="_blank">GitHub</a>
+      <a href="https://docs.anthropic.com/en/docs/mcp" target="_blank">MCP Docs</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+  let currentUrl = '';
+
+  document.getElementById('setupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const errorBox = document.getElementById('errorBox');
+    const resultBox = document.getElementById('resultBox');
+
+    errorBox.classList.remove('show');
+    resultBox.classList.remove('show');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>Generating...';
+
+    const payload = {
+      clientId: document.getElementById('clientId').value.trim(),
+      clientSecret: document.getElementById('clientSecret').value.trim(),
+      refreshToken: document.getElementById('refreshToken').value.trim(),
+      developerToken: document.getElementById('developerToken').value.trim(),
+      customerId: document.getElementById('customerId').value.trim(),
+      managerAccountId: document.getElementById('managerAccountId').value.trim() || undefined,
+    };
+
+    try {
+      const res = await fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      currentUrl = data.mcpUrl;
+      document.getElementById('mcpUrl').textContent = data.mcpUrl;
+      resultBox.classList.add('show');
+      resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    } catch (err) {
+      errorBox.textContent = '✗ ' + err.message;
+      errorBox.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Generate My MCP URL →';
+    }
+  });
+
+  function copyUrl() {
+    if (!currentUrl) return;
+    navigator.clipboard.writeText(currentUrl).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
