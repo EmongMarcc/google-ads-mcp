@@ -21,7 +21,90 @@ function getCustomer(creds, customerId) {
   });
 }
 
+// Wrap every tool handler to catch auth errors and return clear guidance
+function withAuthErrorHandling(fn, mcpBaseUrl) {
+  return async (...args) => {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      const msg = err?.message || String(err);
+
+      // OAuth token expired or revoked
+      if (
+        msg.includes("invalid_grant") ||
+        msg.includes("Token has been expired") ||
+        msg.includes("token expired") ||
+        msg.includes("Invalid Credentials") ||
+        msg.includes("UNAUTHENTICATED")
+      ) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                "❌ OAuth Token Expired or Revoked",
+                "",
+                "Your Google Ads OAuth refresh token is no longer valid. This happens when:",
+                "  • The token hasn't been used for 6+ months",
+                "  • You revoked access in your Google account",
+                "  • Your Google password changed",
+                "",
+                "✅ How to fix it:",
+                `  1. Visit the MCP registration page and generate a new refresh token`,
+                "  2. Come back to Claude.ai → Settings → Integrations",
+                "  3. Remove the old Google Ads integration",
+                "  4. Add your new MCP URL",
+                "",
+                "Need a new refresh token? Use the Google OAuth Playground:",
+                "  https://developers.google.com/oauthplayground",
+                "  → Select 'Google Ads API' scopes → Exchange for tokens",
+              ].join("\n"),
+            },
+          ],
+        };
+      }
+
+      // Permission / account access error
+      if (
+        msg.includes("PERMISSION_DENIED") ||
+        msg.includes("Customer not found") ||
+        msg.includes("not authorized")
+      ) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                "❌ Permission Denied",
+                "",
+                `Error: ${msg}`,
+                "",
+                "This usually means:",
+                "  • The Customer ID is wrong or you don't have access to it",
+                "  • If using a Manager (MCC) account, make sure the Manager Account ID is set correctly",
+                "  • The Google account linked to your credentials doesn't have access to this Ads account",
+              ].join("\n"),
+            },
+          ],
+        };
+      }
+
+      // Generic error — still surface it clearly
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Google Ads API Error\n\n${msg}\n\nIf this persists, try re-registering your credentials at the MCP server homepage.`,
+          },
+        ],
+      };
+    }
+  };
+}
+
 export function registerTools(server, creds) {
+  const wrap = (fn) => withAuthErrorHandling(fn);
+
   // 1. LIST CAMPAIGNS
   server.tool(
     "list_campaigns",
@@ -30,7 +113,7 @@ export function registerTools(server, creds) {
       customer_id: z.string().optional().describe("Override default customer ID"),
       status: z.enum(["ENABLED", "PAUSED", "REMOVED", "ALL"]).optional().default("ALL"),
     },
-    async ({ customer_id, status }) => {
+    wrap(async ({ customer_id, status }) => {
       const customer = getCustomer(creds, customer_id);
       const statusFilter = status && status !== "ALL" ? `AND campaign.status = '${status}'` : "";
       const campaigns = await customer.query(`
@@ -43,7 +126,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.cost_micros DESC LIMIT 50
       `);
       return { content: [{ type: "text", text: JSON.stringify(campaigns, null, 2) }] };
-    }
+    })
   );
 
   // 2. GET CAMPAIGN PERFORMANCE
@@ -56,7 +139,7 @@ export function registerTools(server, creds) {
       date_to: z.string().describe("End date YYYY-MM-DD"),
       campaign_id: z.string().optional(),
     },
-    async ({ customer_id, date_from, date_to, campaign_id }) => {
+    wrap(async ({ customer_id, date_from, date_to, campaign_id }) => {
       const customer = getCustomer(creds, customer_id);
       const campaignFilter = campaign_id ? `AND campaign.id = ${campaign_id}` : "";
       const results = await customer.query(`
@@ -69,7 +152,7 @@ export function registerTools(server, creds) {
         ORDER BY segments.date DESC
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 3. LIST AD GROUPS
@@ -81,7 +164,7 @@ export function registerTools(server, creds) {
       campaign_id: z.string().optional(),
       status: z.enum(["ENABLED", "PAUSED", "REMOVED", "ALL"]).optional().default("ALL"),
     },
-    async ({ customer_id, campaign_id, status }) => {
+    wrap(async ({ customer_id, campaign_id, status }) => {
       const customer = getCustomer(creds, customer_id);
       const filters = [];
       if (campaign_id) filters.push(`campaign.id = ${campaign_id}`);
@@ -95,7 +178,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.cost_micros DESC LIMIT 100
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 4. LIST ADS
@@ -108,7 +191,7 @@ export function registerTools(server, creds) {
       ad_group_id: z.string().optional(),
       status: z.enum(["ENABLED", "PAUSED", "REMOVED", "ALL"]).optional().default("ALL"),
     },
-    async ({ customer_id, campaign_id, ad_group_id, status }) => {
+    wrap(async ({ customer_id, campaign_id, ad_group_id, status }) => {
       const customer = getCustomer(creds, customer_id);
       const filters = ["ad_group_ad.status != 'REMOVED'"];
       if (campaign_id) filters.push(`campaign.id = ${campaign_id}`);
@@ -124,7 +207,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.impressions DESC LIMIT 100
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 5. GET KEYWORDS
@@ -137,7 +220,7 @@ export function registerTools(server, creds) {
       ad_group_id: z.string().optional(),
       status: z.enum(["ENABLED", "PAUSED", "REMOVED", "ALL"]).optional().default("ALL"),
     },
-    async ({ customer_id, campaign_id, ad_group_id, status }) => {
+    wrap(async ({ customer_id, campaign_id, ad_group_id, status }) => {
       const customer = getCustomer(creds, customer_id);
       const filters = [];
       if (campaign_id) filters.push(`campaign.id = ${campaign_id}`);
@@ -158,7 +241,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.cost_micros DESC LIMIT 200
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 6. GET ACCOUNT SUMMARY
@@ -170,7 +253,7 @@ export function registerTools(server, creds) {
       date_from: z.string().describe("Start date YYYY-MM-DD"),
       date_to: z.string().describe("End date YYYY-MM-DD"),
     },
-    async ({ customer_id, date_from, date_to }) => {
+    wrap(async ({ customer_id, date_from, date_to }) => {
       const customer = getCustomer(creds, customer_id);
       const results = await customer.query(`
         SELECT customer.id, customer.descriptive_name, customer.currency_code,
@@ -180,7 +263,7 @@ export function registerTools(server, creds) {
         WHERE segments.date BETWEEN '${date_from}' AND '${date_to}'
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 7. GET TOP KEYWORDS
@@ -195,7 +278,7 @@ export function registerTools(server, creds) {
       limit: z.number().optional().default(20),
       order: z.enum(["top", "worst"]).default("top"),
     },
-    async ({ customer_id, date_from, date_to, metric, limit, order }) => {
+    wrap(async ({ customer_id, date_from, date_to, metric, limit, order }) => {
       const customer = getCustomer(creds, customer_id);
       const metricMap = { clicks: "metrics.clicks", impressions: "metrics.impressions", conversions: "metrics.conversions", cost: "metrics.cost_micros" };
       const orderDir = order === "top" ? "DESC" : "ASC";
@@ -210,7 +293,7 @@ export function registerTools(server, creds) {
         ORDER BY ${metricMap[metric]} ${orderDir} LIMIT ${limit}
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 8. GET SEARCH TERMS
@@ -224,7 +307,7 @@ export function registerTools(server, creds) {
       campaign_id: z.string().optional(),
       min_impressions: z.number().optional().default(10),
     },
-    async ({ customer_id, date_from, date_to, campaign_id, min_impressions }) => {
+    wrap(async ({ customer_id, date_from, date_to, campaign_id, min_impressions }) => {
       const customer = getCustomer(creds, customer_id);
       const campaignFilter = campaign_id ? `AND campaign.id = ${campaign_id}` : "";
       const results = await customer.query(`
@@ -237,7 +320,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.clicks DESC LIMIT 200
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 9. GET GEO PERFORMANCE
@@ -250,7 +333,7 @@ export function registerTools(server, creds) {
       date_to: z.string(),
       campaign_id: z.string().optional(),
     },
-    async ({ customer_id, date_from, date_to, campaign_id }) => {
+    wrap(async ({ customer_id, date_from, date_to, campaign_id }) => {
       const customer = getCustomer(creds, customer_id);
       const campaignFilter = campaign_id ? `AND campaign.id = ${campaign_id}` : "";
       const results = await customer.query(`
@@ -262,7 +345,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.clicks DESC LIMIT 100
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 10. GET DEVICE PERFORMANCE
@@ -275,7 +358,7 @@ export function registerTools(server, creds) {
       date_to: z.string(),
       campaign_id: z.string().optional(),
     },
-    async ({ customer_id, date_from, date_to, campaign_id }) => {
+    wrap(async ({ customer_id, date_from, date_to, campaign_id }) => {
       const customer = getCustomer(creds, customer_id);
       const campaignFilter = campaign_id ? `AND campaign.id = ${campaign_id}` : "";
       const results = await customer.query(`
@@ -287,7 +370,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.cost_micros DESC
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 11. GET AD SCHEDULE PERFORMANCE
@@ -300,7 +383,7 @@ export function registerTools(server, creds) {
       date_to: z.string(),
       campaign_id: z.string().optional(),
     },
-    async ({ customer_id, date_from, date_to, campaign_id }) => {
+    wrap(async ({ customer_id, date_from, date_to, campaign_id }) => {
       const customer = getCustomer(creds, customer_id);
       const campaignFilter = campaign_id ? `AND campaign.id = ${campaign_id}` : "";
       const results = await customer.query(`
@@ -312,7 +395,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.clicks DESC
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 12. GET AUDIENCE PERFORMANCE
@@ -324,7 +407,7 @@ export function registerTools(server, creds) {
       date_from: z.string(),
       date_to: z.string(),
     },
-    async ({ customer_id, date_from, date_to }) => {
+    wrap(async ({ customer_id, date_from, date_to }) => {
       const customer = getCustomer(creds, customer_id);
       const results = await customer.query(`
         SELECT ad_group_audience_view.resource_name, campaign.name, ad_group.name,
@@ -335,7 +418,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.clicks DESC LIMIT 100
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 13. UPDATE CAMPAIGN STATUS
@@ -347,7 +430,7 @@ export function registerTools(server, creds) {
       campaign_id: z.string().describe("Campaign resource name or ID"),
       status: z.enum(["ENABLED", "PAUSED"]),
     },
-    async ({ customer_id, campaign_id, status }) => {
+    wrap(async ({ customer_id, campaign_id, status }) => {
       const customer = getCustomer(creds, customer_id);
       const id = (customer_id || creds.customerId).replace(/-/g, "");
       const result = await customer.campaigns.update([{
@@ -355,7 +438,7 @@ export function registerTools(server, creds) {
         status,
       }]);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-    }
+    })
   );
 
   // 14. UPDATE CAMPAIGN BUDGET
@@ -367,7 +450,7 @@ export function registerTools(server, creds) {
       budget_id: z.string().describe("Campaign budget ID"),
       amount_usd: z.number().describe("New daily budget in USD"),
     },
-    async ({ customer_id, budget_id, amount_usd }) => {
+    wrap(async ({ customer_id, budget_id, amount_usd }) => {
       const customer = getCustomer(creds, customer_id);
       const id = (customer_id || creds.customerId).replace(/-/g, "");
       const amount_micros = Math.round(amount_usd * 1_000_000);
@@ -376,7 +459,7 @@ export function registerTools(server, creds) {
         amount_micros,
       }]);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-    }
+    })
   );
 
   // 15. GET CONVERSION ACTIONS
@@ -384,7 +467,7 @@ export function registerTools(server, creds) {
     "get_conversion_actions",
     "List all conversion actions configured in the account",
     { customer_id: z.string().optional() },
-    async ({ customer_id }) => {
+    wrap(async ({ customer_id }) => {
       const customer = getCustomer(creds, customer_id);
       const results = await customer.query(`
         SELECT conversion_action.id, conversion_action.name, conversion_action.status,
@@ -396,7 +479,7 @@ export function registerTools(server, creds) {
         ORDER BY metrics.conversions DESC
       `);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 
   // 16. GET KEYWORD IDEAS
@@ -409,7 +492,7 @@ export function registerTools(server, creds) {
       language_id: z.string().optional().default("1000"),
       geo_target_id: z.string().optional().describe("Location criterion ID (e.g. 2784 for UAE)"),
     },
-    async ({ customer_id, keywords, language_id, geo_target_id }) => {
+    wrap(async ({ customer_id, keywords, language_id, geo_target_id }) => {
       const client = getClient(creds);
       const id = (customer_id || creds.customerId).replace(/-/g, "");
       const loginId = creds.managerAccountId ? creds.managerAccountId.replace(/-/g, "") : undefined;
@@ -426,7 +509,7 @@ export function registerTools(server, creds) {
         keyword_seed: { keywords },
       });
       return { content: [{ type: "text", text: JSON.stringify(ideas, null, 2) }] };
-    }
+    })
   );
 
   // 17. GET QUALITY SCORES
@@ -438,7 +521,7 @@ export function registerTools(server, creds) {
       campaign_id: z.string().optional(),
       min_score: z.number().optional().default(0),
     },
-    async ({ customer_id, campaign_id, min_score }) => {
+    wrap(async ({ customer_id, campaign_id, min_score }) => {
       const customer = getCustomer(creds, customer_id);
       const filters = ["ad_group_criterion.type = 'KEYWORD'"];
       if (campaign_id) filters.push(`campaign.id = ${campaign_id}`);
@@ -459,7 +542,7 @@ export function registerTools(server, creds) {
           })
         : results;
       return { content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }] };
-    }
+    })
   );
 
   // 18. RUN GAQL QUERY
@@ -470,10 +553,10 @@ export function registerTools(server, creds) {
       customer_id: z.string().optional(),
       query: z.string().describe("GAQL query string"),
     },
-    async ({ customer_id, query }) => {
+    wrap(async ({ customer_id, query }) => {
       const customer = getCustomer(creds, customer_id);
       const results = await customer.query(query);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-    }
+    })
   );
 }

@@ -689,6 +689,31 @@
     </div>
   </section>
 
+  <!-- TOKEN EXPIRED HELP -->
+  <section class="features fade-up" style="padding-top:0">
+    <p class="features-label">Token expired?</p>
+    <div class="setup-card" style="border-color:rgba(251,188,4,0.2);background:rgba(251,188,4,0.03)">
+      <div class="setup-body" style="padding:28px 40px">
+        <div style="display:flex;gap:20px;align-items:flex-start">
+          <div style="font-size:28px;flex-shrink:0">⚠️</div>
+          <div>
+            <h3 style="font-size:15px;font-weight:500;margin-bottom:8px;color:#fbbf24">Getting an <code style="font-size:13px;background:rgba(251,188,4,0.1);padding:2px 6px;border-radius:4px">invalid_grant</code> error?</h3>
+            <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">
+              OAuth refresh tokens expire after <strong style="color:var(--text)">6 months of inactivity</strong> or if your Google password changes.
+              When this happens, all MCP tools will return a clear error message explaining what to do.
+            </p>
+            <p style="font-size:13px;color:var(--muted);line-height:1.7">
+              <strong style="color:var(--text)">To get a new refresh token:</strong> Visit the
+              <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:var(--accent2)">Google OAuth Playground</a>,
+              select the Google Ads API scope (<code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:3px">https://www.googleapis.com/auth/adwords</code>),
+              and exchange for a new token. Then re-register above with your new refresh token.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- HOW IT WORKS -->
   <section class="how">
     <h2>How it works</h2>
