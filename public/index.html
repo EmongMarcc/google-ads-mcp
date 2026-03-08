@@ -562,6 +562,7 @@
     </div>
     <ul class="nav-links">
       <li><a href="#setup">Get Started</a></li>
+      <li><a href="#reauth">Refresh Token</a></li>
       <li><a href="#tools">Tools</a></li>
       <li><a href="https://github.com/EmongMarcc/google-ads-mcp" target="_blank">GitHub</a></li>
     </ul>
@@ -671,6 +672,42 @@
             4. Start a new chat and ask Claude about your Google Ads campaigns!
           </p>
         </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- RE-AUTHORIZE SECTION -->
+  <section class="setup-section fade-up" id="reauth" style="padding-bottom:0">
+    <div class="setup-card" style="border-color:rgba(129,140,248,0.25)">
+      <div class="setup-header" style="border-color:rgba(129,140,248,0.15)">
+        <div class="setup-num" style="background:rgba(129,140,248,0.1);border-color:rgba(129,140,248,0.3);color:var(--accent2)">↻</div>
+        <div class="setup-header-text">
+          <h2>Refresh an existing token</h2>
+          <p>Already registered? Paste your MCP URL or token below to re-authorize without losing your integration.</p>
+        </div>
+      </div>
+      <div class="setup-body">
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div class="form-group" style="flex:1;min-width:260px">
+            <label>Your MCP URL or Token <span class="req">*</span></label>
+            <input
+              type="text"
+              id="reauthInput"
+              placeholder="https://…/mcp/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  or just the UUID"
+              style="font-size:12px"
+            />
+          </div>
+          <div style="padding-top:24px">
+            <button class="submit-btn" id="reauthBtn" onclick="startReauth()" style="width:auto;padding:12px 28px;margin-top:0">
+              Re-authorize with Google →
+            </button>
+          </div>
+        </div>
+        <div class="error-box" id="reauthErrorBox" style="margin-top:12px"></div>
+        <p style="font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6">
+          This will open Google's sign-in page. After you approve access, your token refreshes automatically — <strong style="color:var(--text)">no need to update your MCP URL in Claude.ai</strong>.
+        </p>
       </div>
     </div>
   </section>
@@ -821,6 +858,38 @@
       }, 2000);
     });
   }
+
+  function startReauth() {
+    const input = document.getElementById('reauthInput').value.trim();
+    const errorBox = document.getElementById('reauthErrorBox');
+    errorBox.classList.remove('show');
+
+    if (!input) {
+      errorBox.textContent = '✗ Please enter your MCP URL or token.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    // Extract UUID from full URL or accept bare UUID
+    const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i;
+    const match = input.match(uuidRegex);
+    if (!match) {
+      errorBox.textContent = '✗ Could not find a valid token UUID. Paste your full MCP URL or just the UUID.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    const token = match[0];
+    // Navigate to the reauth endpoint — server handles the Google OAuth redirect
+    window.location.href = '/reauth/' + token;
+  }
+
+  // Allow pressing Enter in the reauth input
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('reauthInput');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') startReauth(); });
+  });
+
   // Show reauth success/error banners based on URL params
   (function() {
     const p = new URLSearchParams(window.location.search);
