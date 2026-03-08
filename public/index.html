@@ -567,6 +567,14 @@
     </ul>
   </nav>
 
+  <!-- REAUTH SUCCESS / ERROR BANNERS -->
+  <div id="reauthBanner" style="display:none;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:10px;padding:16px 24px;margin:24px 0 0;font-size:14px;color:var(--accent)">
+    ✅ <strong>Token refreshed!</strong> Your Google Ads MCP is re-authorized and working again. No need to update anything in Claude.ai — just try your query again.
+  </div>
+  <div id="errorBanner" style="display:none;background:rgba(234,67,53,0.06);border:1px solid rgba(234,67,53,0.2);border-radius:10px;padding:16px 24px;margin:24px 0 0;font-size:14px;color:#f87171">
+    ❌ <strong>Re-authorization failed:</strong> <span id="errorBannerMsg"></span>
+  </div>
+
   <!-- HERO -->
   <section class="hero fade-up">
     <div class="hero-badge">
@@ -813,6 +821,20 @@
       }, 2000);
     });
   }
+  // Show reauth success/error banners based on URL params
+  (function() {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('reauth') === 'success') {
+      document.getElementById('reauthBanner').style.display = 'block';
+      setTimeout(() => document.getElementById('reauthBanner').scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+      history.replaceState({}, '', '/');
+    } else if (p.get('error')) {
+      const msg = decodeURIComponent(p.get('error'));
+      document.getElementById('errorBannerMsg').textContent = msg;
+      document.getElementById('errorBanner').style.display = 'block';
+      history.replaceState({}, '', '/');
+    }
+  })();
 </script>
 </body>
 </html>

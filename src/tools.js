@@ -49,15 +49,12 @@ function withAuthErrorHandling(fn, mcpBaseUrl) {
                 "  • You revoked access in your Google account",
                 "  • Your Google password changed",
                 "",
-                "✅ How to fix it:",
-                `  1. Visit the MCP registration page and generate a new refresh token`,
-                "  2. Come back to Claude.ai → Settings → Integrations",
-                "  3. Remove the old Google Ads integration",
-                "  4. Add your new MCP URL",
+                "✅ Fix it in one click:",
+                `  👉 ${baseUrl}/reauth/${sessionToken}`,
                 "",
-                "Need a new refresh token? Use the Google OAuth Playground:",
-                "  https://developers.google.com/oauthplayground",
-                "  → Select 'Google Ads API' scopes → Exchange for tokens",
+                "  Open that link → sign in to Google → your token refreshes automatically.",
+                "  Then come back to Claude and try again — no need to re-add the integration.",
+                
               ].join("\n"),
             },
           ],
@@ -102,7 +99,7 @@ function withAuthErrorHandling(fn, mcpBaseUrl) {
   };
 }
 
-export function registerTools(server, creds) {
+export function registerTools(server, creds, sessionToken, baseUrl) {
   const wrap = (fn) => withAuthErrorHandling(fn);
 
   // 1. LIST CAMPAIGNS
