@@ -734,31 +734,6 @@
     </div>
   </section>
 
-  <!-- TOKEN EXPIRED HELP -->
-  <section class="features fade-up" style="padding-top:0">
-    <p class="features-label">Token expired?</p>
-    <div class="setup-card" style="border-color:rgba(251,188,4,0.2);background:rgba(251,188,4,0.03)">
-      <div class="setup-body" style="padding:28px 40px">
-        <div style="display:flex;gap:20px;align-items:flex-start">
-          <div style="font-size:28px;flex-shrink:0">⚠️</div>
-          <div>
-            <h3 style="font-size:15px;font-weight:500;margin-bottom:8px;color:#fbbf24">Getting an <code style="font-size:13px;background:rgba(251,188,4,0.1);padding:2px 6px;border-radius:4px">invalid_grant</code> error?</h3>
-            <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">
-              OAuth refresh tokens expire after <strong style="color:var(--text)">6 months of inactivity</strong> or if your Google password changes.
-              When this happens, all MCP tools will return a clear error message explaining what to do.
-            </p>
-            <p style="font-size:13px;color:var(--muted);line-height:1.7">
-              <strong style="color:var(--text)">To get a new refresh token:</strong> Visit the
-              <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:var(--accent2)">Google OAuth Playground</a>,
-              select the Google Ads API scope (<code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:3px">https://www.googleapis.com/auth/adwords</code>),
-              and exchange for a new token. Then re-register above with your new refresh token.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- HOW IT WORKS -->
   <section class="how">
     <h2>How it works</h2>
@@ -859,6 +834,18 @@
     });
   }
 
+  function switchTab(tab) {
+    const isNew = tab === 'new';
+    document.getElementById('panelNew').style.display    = isNew ? '' : 'none';
+    document.getElementById('panelReauth').style.display = isNew ? 'none' : '';
+    const tabNewBtn    = document.getElementById('tabNew');
+    const tabReauthBtn = document.getElementById('tabReauth');
+    tabNewBtn.style.borderBottomColor    = isNew ? 'var(--accent)' : 'transparent';
+    tabNewBtn.style.color                = isNew ? 'var(--text)'   : 'var(--muted)';
+    tabReauthBtn.style.borderBottomColor = isNew ? 'transparent'   : '#a5b4fc';
+    tabReauthBtn.style.color             = isNew ? 'var(--muted)'  : 'var(--text)';
+  }
+
   function startReauth() {
     const input = document.getElementById('reauthInput').value.trim();
     const errorBox = document.getElementById('reauthErrorBox');
@@ -870,7 +857,6 @@
       return;
     }
 
-    // Extract UUID from full URL or accept bare UUID
     const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i;
     const match = input.match(uuidRegex);
     if (!match) {
@@ -879,21 +865,32 @@
       return;
     }
 
-    const token = match[0];
-    // Navigate to the reauth endpoint — server handles the Google OAuth redirect
-    window.location.href = '/reauth/' + token;
+    window.location.href = '/reauth/' + match[0];
   }
 
   // Allow pressing Enter in the reauth input
   document.addEventListener('DOMContentLoaded', () => {
     const inp = document.getElementById('reauthInput');
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') startReauth(); });
+
+    // If URL hash is #reauth, switch to the reauth tab
+    if (window.location.hash === '#reauth') switchTab('reauth');
+  });
+
+  // Handle nav "Refresh Token" link click — switch tab without page reload
+  document.querySelectorAll('a[href="#reauth"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      switchTab('reauth');
+      document.getElementById('setup').scrollIntoView({ behavior: 'smooth' });
+    });
   });
 
   // Show reauth success/error banners based on URL params
   (function() {
     const p = new URLSearchParams(window.location.search);
     if (p.get('reauth') === 'success') {
+      switchTab('reauth');
       document.getElementById('reauthBanner').style.display = 'block';
       setTimeout(() => document.getElementById('reauthBanner').scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
       history.replaceState({}, '', '/');
